@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Porto"/>
-<meta name="description" content="Pantau portofolio aset kamu secara real-time"/>
 <title>Portofolio Tracker</title>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icon-192.png"/>
@@ -15,746 +14,704 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
-/* ── Reset ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html { font-size: 16px; }
-html, body {
-  background: #080C10;
-  color: #F0F6FF;
-  font-family: 'Syne', sans-serif;
-  overscroll-behavior: none;
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden;
+/* ════════════════════════════════════════════
+   RESET
+════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{
+  background:#080C10;color:#F0F6FF;
+  font-family:'Syne',sans-serif;
+  overscroll-behavior:none;
+  height:100%;width:100%;
+  overflow:hidden; /* no body scroll — each zone scrolls itself */
 }
-::-webkit-scrollbar { display: none; }
-* { scrollbar-width: none; }
-input, button { -webkit-appearance: none; appearance: none; font-family: inherit; }
-button { cursor: pointer; }
+::-webkit-scrollbar{display:none}
+*{scrollbar-width:none}
+input,button{-webkit-appearance:none;appearance:none;font-family:inherit}
+button{cursor:pointer}
 
-/* ── Responsive design tokens using CSS custom properties ── */
-:root {
-  /* Screen-relative spacing */
-  --sp-xs:  clamp(4px,  1vw,  8px);
-  --sp-sm:  clamp(8px,  2vw, 14px);
-  --sp-md:  clamp(12px, 3vw, 20px);
-  --sp-lg:  clamp(16px, 4vw, 28px);
-  --sp-xl:  clamp(20px, 5vw, 36px);
+/* ════════════════════════════════════════════
+   DESIGN TOKENS — portrait base
+════════════════════════════════════════════ */
+:root{
+  --bg:       #080C10;
+  --bg2:      #0D1117;
+  --border:   #1E2530;
+  --muted:    #556070;
+  --text:     #F0F6FF;
+  --accent:   #00E5FF;
 
-  /* Typography scale */
-  --fs-xs:  clamp(9px,  2.2vw, 11px);
-  --fs-sm:  clamp(11px, 2.8vw, 13px);
-  --fs-md:  clamp(13px, 3.4vw, 16px);
-  --fs-lg:  clamp(15px, 4vw,   19px);
-  --fs-xl:  clamp(20px, 5.5vw, 28px);
-  --fs-2xl: clamp(28px, 8vw,   42px);
-  --fs-hero:clamp(26px, 7.5vw, 40px);
+  /* Fluid type: scales with the SMALLER of vw/vh so both orientations feel right */
+  --fs-xs:   clamp(9px,  2vmin, 11px);
+  --fs-sm:   clamp(11px, 2.6vmin,13px);
+  --fs-md:   clamp(13px, 3.2vmin,16px);
+  --fs-lg:   clamp(15px, 3.8vmin,19px);
+  --fs-xl:   clamp(18px, 4.8vmin,26px);
+  --fs-hero: clamp(24px, 6.5vmin,40px);
 
-  /* Border radius */
-  --r-sm:  clamp(8px,  2vw, 12px);
-  --r-md:  clamp(12px, 3vw, 18px);
-  --r-lg:  clamp(16px, 4vw, 24px);
-  --r-xl:  clamp(18px, 4.5vw, 26px);
+  /* Fluid spacing */
+  --sp-xs: clamp(4px,  1vmin, 7px);
+  --sp-sm: clamp(7px,  2vmin,13px);
+  --sp-md: clamp(11px, 3vmin,18px);
+  --sp-lg: clamp(14px, 4vmin,24px);
 
   /* Component sizes */
-  --icon-size:   clamp(38px, 10vw, 50px);
-  --nav-height:  clamp(56px, 14vw, 72px);
-  --header-h:    clamp(56px, 14vw, 72px);
-  --chart-h:     clamp(160px, 45vw, 230px);
-  --btn-pad-y:   clamp(10px, 2.5vw, 14px);
-  --btn-pad-x:   clamp(12px, 3vw,   18px);
-  --inp-pad:     clamp(11px, 2.8vw, 15px);
+  --icon:    clamp(36px, 9vmin, 50px);
+  --r-sm:    clamp(8px,  2vmin,12px);
+  --r-md:    clamp(12px, 3vmin,18px);
+  --r-lg:    clamp(16px, 4vmin,22px);
+  --r-xl:    clamp(18px, 4.5vmin,26px);
+  --chart-h: clamp(150px,35vmin,220px);
 
   /* Safe areas */
-  --safe-top:    env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top,    0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left,   0px);
+  --safe-r: env(safe-area-inset-right,  0px);
+
+  /* Layout dimensions (overridden per orientation below) */
+  --nav-w: 0px;   /* sidebar width in landscape */
+  --nav-h: clamp(54px,14vmin,68px); /* bottom nav height in portrait */
 }
 
-/* ── Animations ── */
-.slide-up  { animation: slideUp  .28s cubic-bezier(.32,.72,0,1) }
-.fade-in   { animation: fadeIn   .22s ease }
-.spin      { animation: spin 1s linear infinite }
-@keyframes slideUp  { from { transform: translateY(100%) } to { transform: translateY(0) } }
-@keyframes fadeIn   { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
-@keyframes spin     { to { transform: rotate(360deg) } }
+/* ════════════════════════════════════════════
+   ANIMATIONS
+════════════════════════════════════════════ */
+.slide-up { animation: slideUp .28s cubic-bezier(.32,.72,0,1) }
+.fade-in  { animation: fadeIn  .22s ease }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 
-/* ── Layout shell ── */
-#shell {
-  position: relative;
-  width: 100%;
-  max-width: 540px;
-  min-height: 100vh;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
+/* ════════════════════════════════════════════
+   APP SHELL  –  fills the viewport exactly
+════════════════════════════════════════════ */
+#app{
+  position:fixed;inset:0;
+  display:flex;
+  flex-direction:column;   /* portrait: column */
+  overflow:hidden;
 }
 
-/* ── Sticky header ── */
-#hdr {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: #080C10EE;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid #1E2530;
-  padding: var(--sp-sm) var(--sp-md);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: var(--header-h);
-  padding-top: calc(var(--sp-sm) + var(--safe-top));
+/* ── Top header (portrait) ── */
+#hdr{
+  flex-shrink:0;
+  background:#080C10EE;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:calc(var(--sp-sm) + var(--safe-t)) var(--sp-md) var(--sp-sm);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:var(--sp-sm);
 }
-.hdr-logo { font-size: var(--fs-lg); font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
-.hdr-logo span { color: #00E5FF; }
-.hdr-sub  { font-family: 'DM Mono', monospace; color: #556070; font-size: var(--fs-xs); margin-top: 2px; }
-.hdr-btns { display: flex; gap: var(--sp-xs); }
-.btn-icon {
-  border-radius: var(--r-sm);
-  padding: var(--btn-pad-y) var(--btn-pad-x);
-  font-size: var(--fs-md);
-  line-height: 1;
-  border: 1px solid;
-  font-weight: 600;
-  transition: opacity .15s;
+.hdr-logo{font-size:var(--fs-lg);font-weight:800;letter-spacing:-.5px;line-height:1.1}
+.hdr-logo span{color:var(--accent)}
+.hdr-sub{font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-xs);margin-top:2px}
+.hdr-btns{display:flex;gap:var(--sp-xs);flex-shrink:0}
+.btn-hdr{
+  border:1px solid;border-radius:var(--r-sm);
+  padding:clamp(7px,1.8vmin,11px) clamp(10px,2.5vmin,16px);
+  font-size:var(--fs-sm);font-weight:600;line-height:1;
+  transition:opacity .15s;
 }
-.btn-icon:active { opacity: .7; }
+.btn-hdr:active{opacity:.7}
+
+/* ── Main body row (header is above, nav is below in portrait) ── */
+#body{
+  flex:1;
+  display:flex;
+  flex-direction:row;
+  overflow:hidden;
+  min-height:0; /* critical for flex children to scroll */
+}
+
+/* ── Sidebar nav (landscape) – hidden in portrait ── */
+#sidenav{
+  display:none; /* shown in landscape via media query */
+  flex-direction:column;
+  align-items:stretch;
+  background:#080C10F0;
+  border-right:1px solid var(--border);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  flex-shrink:0;
+  width:var(--nav-w);
+  padding-top:var(--sp-sm);
+  padding-bottom:calc(var(--sp-sm) + var(--safe-b));
+  padding-left:var(--safe-l);
+  overflow-y:auto;
+  gap:var(--sp-xs);
+  z-index:50;
+}
+.side-btn{
+  display:flex;align-items:center;gap:var(--sp-sm);
+  background:none;border:none;
+  padding:clamp(10px,2.5vmin,14px) var(--sp-md);
+  border-radius:var(--r-md);
+  margin:0 var(--sp-xs);
+  color:var(--muted);font-size:var(--fs-sm);
+  transition:all .15s;text-align:left;
+}
+.side-btn.active{background:#00E5FF11;color:#F0F6FF;border-left:3px solid var(--accent)}
+.side-btn:not(.active){border-left:3px solid transparent}
+.side-icon{font-size:var(--fs-md);flex-shrink:0}
+.side-lbl{font-family:'DM Mono',monospace;letter-spacing:.5px}
 
 /* ── Scroll area ── */
-#scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--sp-md));
+#scroll{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  min-width:0;
+}
+#content{
+  padding:var(--sp-sm);
+  padding-bottom:calc(var(--nav-h) + var(--safe-b) + var(--sp-md));
 }
 
-/* ── Hero card ── */
-.hero {
-  margin: var(--sp-sm) var(--sp-sm) var(--sp-xs);
-  background: linear-gradient(135deg, #0D1117, #0A1520);
-  border: 1px solid #1E2530;
-  border-radius: var(--r-xl);
-  padding: var(--sp-lg) var(--sp-md);
-  position: relative;
-  overflow: hidden;
+/* ── Bottom nav (portrait) ── */
+#botnav{
+  flex-shrink:0;
+  display:flex;
+  background:#0D1117F5;
+  border-top:1px solid var(--border);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  padding-bottom:var(--safe-b);
+  z-index:50;
 }
-.hero-glow {
-  position: absolute; right: -10%; top: -20%;
-  width: 45%; aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, #00E5FF09 0%, transparent 70%);
-  pointer-events: none;
+.bot-btn{
+  flex:1;background:none;border:none;
+  border-top:2px solid transparent;
+  padding:var(--sp-sm) 0;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--muted);transition:all .15s;
 }
-.hero-label { font-family: 'DM Mono', monospace; color: #556070; font-size: var(--fs-xs); letter-spacing: 2px; margin-bottom: var(--sp-xs); }
-.hero-value { font-size: var(--fs-hero); font-weight: 800; letter-spacing: -2px; line-height: 1; }
-.hero-meta  { display: flex; gap: var(--sp-sm); margin-top: var(--sp-sm); align-items: center; flex-wrap: wrap; }
-.hero-change { font-family: 'DM Mono', monospace; font-size: var(--fs-sm); }
-.live-pill {
-  background: #00E5FF22; color: #00E5FF;
-  border: 1px solid #00E5FF44;
-  border-radius: 999px;
-  padding: 2px var(--sp-sm);
-  font-family: 'DM Mono', monospace;
-  font-size: var(--fs-xs);
+.bot-btn.active{border-top-color:var(--accent);color:#F0F6FF}
+.bot-icon{font-size:clamp(15px,4.5vmin,21px);line-height:1}
+.bot-lbl{font-family:'DM Mono',monospace;font-size:var(--fs-xs);letter-spacing:.5px}
+
+/* ════════════════════════════════════════════
+   LANDSCAPE — side-by-side layout
+════════════════════════════════════════════ */
+@media (orientation: landscape) {
+  :root{
+    --nav-w: clamp(110px, 22vw, 160px);
+    --nav-h: 0px; /* no bottom nav */
+    /* In landscape, vmin ≈ vh (the short axis), so font tokens auto-compress */
+  }
+  #app{ flex-direction:column } /* keep top header */
+  #sidenav{ display:flex }
+  #botnav{ display:none }
+  #content{
+    /* no extra bottom pad for nav in landscape */
+    padding-bottom:var(--sp-md);
+  }
+  /* In landscape, hero can be more compact */
+  .hero{ padding:var(--sp-sm) var(--sp-md) }
+  .hero-value{ font-size:clamp(22px,5vmin,36px) }
+  /* Two-column grid for overview cards in landscape */
+  .ls-grid{ display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-sm) }
+  .ls-full{ grid-column:1/-1 }
+  /* Tighter chart height in landscape */
+  --chart-h: clamp(120px, 28vmin, 170px);
 }
 
-/* ── Chips scroll ── */
-.chips {
-  display: flex;
-  gap: var(--sp-xs);
-  padding: var(--sp-xs) var(--sp-sm) var(--sp-sm);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.chip {
-  flex-shrink: 0;
-  background: #0D1117;
-  border-radius: var(--r-md);
-  padding: var(--sp-sm) var(--sp-md);
-  min-width: clamp(90px, 25vw, 120px);
-}
-.chip-cat  { font-family: 'DM Mono', monospace; font-size: var(--fs-xs); letter-spacing: 1px; }
-.chip-val  { font-weight: 700; font-size: var(--fs-md); margin-top: 3px; }
-.chip-pct  { font-family: 'DM Mono', monospace; color: #556070; font-size: var(--fs-sm); margin-top: 1px; }
+/* ════════════════════════════════════════════
+   CONTENT COMPONENTS
+════════════════════════════════════════════ */
 
-/* ── Cards ── */
-.card {
-  background: #0D1117;
-  border: 1px solid #1E2530;
-  border-radius: var(--r-lg);
-  padding: var(--sp-md);
-  margin-bottom: var(--sp-sm);
+/* Hero */
+.hero{
+  background:linear-gradient(135deg,#0D1117,#0A1520);
+  border:1px solid var(--border);
+  border-radius:var(--r-xl);
+  padding:var(--sp-lg) var(--sp-md);
+  margin-bottom:var(--sp-sm);
+  position:relative;overflow:hidden;
 }
-.card-lbl {
-  font-family: 'DM Mono', monospace;
-  color: #556070;
-  font-size: var(--fs-xs);
-  letter-spacing: 2px;
-  margin-bottom: var(--sp-sm);
-  display: block;
+.hero::after{
+  content:'';position:absolute;right:-8%;top:-25%;
+  width:40%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,#00E5FF08 0%,transparent 70%);
+  pointer-events:none;
 }
+.hero-lbl{font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-xs);letter-spacing:2px;margin-bottom:var(--sp-xs)}
+.hero-val{font-size:var(--fs-hero);font-weight:800;letter-spacing:-2px;line-height:1}
+.hero-meta{display:flex;gap:var(--sp-sm);margin-top:var(--sp-sm);align-items:center;flex-wrap:wrap}
+.hero-ch{font-family:'DM Mono',monospace;font-size:var(--fs-sm)}
+.pill{background:#00E5FF22;color:var(--accent);border:1px solid #00E5FF44;border-radius:999px;padding:2px var(--sp-sm);font-family:'DM Mono',monospace;font-size:var(--fs-xs)}
 
-/* ── Asset rows ── */
-.asset-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--sp-sm) 0;
-}
-.asset-row + .asset-row { border-top: 1px solid #1E253044; }
-.asset-icon {
-  width: var(--icon-size);
-  height: var(--icon-size);
-  border-radius: var(--r-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'DM Mono', monospace;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  flex-shrink: 0;
-  text-align: center;
-  padding: 0 2px;
-}
-.asset-name  { font-weight: 700; font-size: var(--fs-md); }
-.asset-sub   { font-family: 'DM Mono', monospace; color: #556070; font-size: var(--fs-xs); margin-top: 2px; }
-.asset-val   { font-weight: 700; font-size: var(--fs-md); text-align: right; }
-.asset-change{ font-family: 'DM Mono', monospace; font-size: var(--fs-sm); margin-top: 2px; text-align: right; }
+/* Chips row */
+.chips{display:flex;gap:var(--sp-xs);overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:var(--sp-sm);padding-bottom:2px}
+.chip{flex-shrink:0;background:var(--bg2);border-radius:var(--r-md);padding:var(--sp-sm) var(--sp-md);min-width:clamp(85px,22vw,115px);border:1px solid}
+.chip-cat{font-family:'DM Mono',monospace;font-size:var(--fs-xs);letter-spacing:1px}
+.chip-val{font-weight:700;font-size:var(--fs-md);margin-top:3px}
+.chip-pct{font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-sm);margin-top:1px}
 
-/* ── Chart canvas wrapper ── */
-.chart-wrap {
-  position: relative;
-  width: 100%;
-  height: var(--chart-h);
-}
-canvas.donut { width: 100%; height: 100%; display: block; }
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-md);margin-bottom:var(--sp-sm)}
+.card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-sm)}
+.card-lbl{font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-xs);letter-spacing:2px}
+.card-total{font-family:'DM Mono',monospace;font-size:var(--fs-md);font-weight:600}
 
-/* ── Legend ── */
-.legend { display: flex; flex-wrap: wrap; gap: clamp(6px,1.5vw,10px) clamp(10px,3vw,16px); margin-top: var(--sp-sm); }
-.legend-item { display: flex; align-items: center; gap: 5px; }
-.legend-dot  { width: clamp(7px,1.8vw,9px); height: clamp(7px,1.8vw,9px); border-radius: 50%; flex-shrink: 0; }
-.legend-name { font-family: 'DM Mono', monospace; font-size: var(--fs-xs); color: #A0AFBF; }
-.legend-pct  { font-family: 'DM Mono', monospace; font-size: var(--fs-xs); }
+/* Chart */
+.chart-wrap{position:relative;width:100%;height:var(--chart-h)}
+canvas.donut{width:100%;height:100%;display:block}
 
-/* ── Bar chart ── */
-.bar-row { margin-bottom: var(--sp-sm); }
-.bar-hdr { display: flex; justify-content: space-between; margin-bottom: 5px; align-items: baseline; }
-.bar-name { font-size: var(--fs-sm); font-weight: 600; }
-.bar-val  { font-family: 'DM Mono', monospace; font-size: var(--fs-sm); color: #A0AFBF; }
-.bar-track{ background: #1E2530; border-radius: 999px; height: clamp(5px,1.5vw,8px); overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 999px; transition: width 1s ease; }
+/* Legend */
+.legend{display:flex;flex-wrap:wrap;gap:clamp(5px,1.5vmin,9px) clamp(9px,3vmin,15px);margin-top:var(--sp-sm)}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-dot{width:clamp(6px,1.8vmin,9px);height:clamp(6px,1.8vmin,9px);border-radius:50%;flex-shrink:0}
+.leg-txt{font-family:'DM Mono',monospace;font-size:var(--fs-xs);color:#A0AFBF}
+.leg-pct{font-family:'DM Mono',monospace;font-size:var(--fs-xs)}
 
-/* ── Info grid (emas/tabungan) ── */
-.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-sm); margin-bottom: var(--sp-sm); }
-.info-box  { background: #1E2530; border-radius: var(--r-sm); padding: var(--sp-sm); }
-.info-lbl  { font-family: 'DM Mono', monospace; color: #556070; font-size: var(--fs-xs); margin-bottom: 4px; }
-.info-val  { font-weight: 700; font-size: var(--fs-md); }
+/* Bar chart */
+.bar-row{margin-bottom:clamp(10px,2.5vmin,16px)}
+.bar-hdr{display:flex;justify-content:space-between;margin-bottom:5px;align-items:baseline;gap:var(--sp-xs)}
+.bar-name{font-size:var(--fs-sm);font-weight:600;flex-shrink:0}
+.bar-val{font-family:'DM Mono',monospace;font-size:var(--fs-xs);color:#A0AFBF;text-align:right}
+.bar-track{background:var(--border);border-radius:999px;height:clamp(5px,1.5vmin,8px);overflow:hidden}
+.bar-fill{height:100%;border-radius:999px;transition:width 1s ease}
 
-/* ── Bottom nav ── */
-#nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 540px;
-  background: #0D1117F5;
-  border-top: 1px solid #1E2530;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  display: flex;
-  z-index: 100;
-  padding-bottom: var(--safe-bottom);
+/* Asset rows */
+.asset-row{display:flex;justify-content:space-between;align-items:center;padding:var(--sp-sm) 0}
+.asset-row+.asset-row{border-top:1px solid #1E253044}
+.asset-icon{
+  width:var(--icon);height:var(--icon);border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;font-size:var(--fs-xs);font-weight:700;
+  flex-shrink:0;text-align:center;padding:0 2px;
 }
-.nav-btn {
-  flex: 1;
-  background: none;
-  border: none;
-  border-top: 2px solid transparent;
-  padding: var(--sp-sm) 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  transition: all .15s;
-}
-.nav-btn.active { border-top-color: #00E5FF; color: #F0F6FF; }
-.nav-btn:not(.active) { color: #556070; }
-.nav-icon { font-size: clamp(16px, 4.5vw, 22px); line-height: 1; }
-.nav-lbl  { font-family: 'DM Mono', monospace; font-size: var(--fs-xs); letter-spacing: 0.5px; }
+.asset-left{display:flex;align-items:center;gap:var(--sp-sm)}
+.asset-name{font-weight:700;font-size:var(--fs-md)}
+.asset-sub{font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-xs);margin-top:2px}
+.asset-right{text-align:right}
+.asset-val{font-weight:700;font-size:var(--fs-md)}
+.asset-ch{font-family:'DM Mono',monospace;font-size:var(--fs-sm);margin-top:2px}
 
-/* ── Edit modal ── */
-#edit-overlay {
-  position: fixed; inset: 0;
-  background: #000000CC;
-  z-index: 200;
-  display: flex; flex-direction: column; justify-content: flex-end;
-}
-#edit-sheet {
-  background: #080C10;
-  border-radius: var(--r-xl) var(--r-xl) 0 0;
-  border: 1px solid #1E2530;
-  border-bottom: none;
-  max-height: 90vh;
-  display: flex; flex-direction: column;
-}
-.edit-handle-wrap { display: flex; justify-content: center; padding: var(--sp-sm) 0 0; }
-.edit-handle { width: clamp(30px,8vw,40px); height: 4px; border-radius: 999px; background: #1E2530; }
-.edit-hdr {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: var(--sp-sm) var(--sp-md) var(--sp-xs);
-}
-.edit-title { font-size: var(--fs-lg); font-weight: 700; }
-.edit-close {
-  background: #1E2530; border: none; color: #A0AFBF;
-  width: clamp(28px,7vw,36px); height: clamp(28px,7vw,36px);
-  border-radius: 50%; font-size: var(--fs-md);
-  display: flex; align-items: center; justify-content: center;
-}
-.edit-tabs {
-  display: flex; gap: var(--sp-xs);
-  padding: var(--sp-xs) var(--sp-md);
-  overflow-x: auto; flex-shrink: 0;
-}
-.edit-tab {
-  border: none; border-radius: 999px;
-  padding: clamp(6px,1.5vw,9px) clamp(12px,3.5vw,18px);
-  font-family: 'Syne', sans-serif;
-  font-size: var(--fs-sm);
-  white-space: nowrap; flex-shrink: 0;
-  transition: all .15s;
-}
-.edit-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: var(--sp-xs) var(--sp-md) var(--sp-sm); flex: 1; }
-.edit-footer { padding: 0 var(--sp-md) calc(var(--sp-lg) + var(--safe-bottom)); flex-shrink: 0; }
-.btn-save {
-  width: 100%; background: #F0F6FF; border: none;
-  border-radius: var(--r-md);
-  padding: var(--btn-pad-y) 0;
-  font-family: 'Syne', sans-serif;
-  font-size: var(--fs-md); font-weight: 700; color: #080C10;
-}
-.edit-item-card {
-  background: #0D1117; border: 1px solid #1E2530;
-  border-radius: var(--r-md); padding: var(--sp-sm);
-  margin-bottom: var(--sp-xs);
-}
-.edit-item-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-sm); }
-.edit-item-title { font-weight: 700; font-size: var(--fs-md); }
-.btn-del {
-  border: none; border-radius: var(--r-sm);
-  padding: clamp(4px,1vw,7px) clamp(10px,2.5vw,14px);
-  background: #FF6B6B22; color: #FF6B6B;
-  font-size: var(--fs-sm);
-}
-.field-lbl { font-family: 'DM Mono', monospace; color: #556070; font-size: var(--fs-xs); letter-spacing: 1px; margin-bottom: 5px; }
-.field-inp {
-  width: 100%; background: #080C10; border: 1px solid #1E2530;
-  border-radius: var(--r-sm); color: #F0F6FF;
-  padding: var(--inp-pad);
-  font-family: 'DM Mono', monospace;
-  font-size: var(--fs-md); outline: none;
-  margin-bottom: var(--sp-sm);
-  transition: border-color .15s;
-}
-.field-inp:focus { border-color: #1E3545; }
-.btn-add {
-  width: 100%; border-radius: var(--r-sm);
-  padding: var(--btn-pad-y) 0;
-  font-family: 'DM Mono', monospace;
-  font-size: var(--fs-sm);
-}
+/* Info grid */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-sm);margin-bottom:var(--sp-sm)}
+.info-box{background:var(--border);border-radius:var(--r-sm);padding:var(--sp-sm)}
+.info-lbl{font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-xs);margin-bottom:4px}
+.info-val{font-weight:700;font-size:var(--fs-md)}
 
-/* ── Install banner ── */
-#install-banner {
-  position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 540px;
-  background: #00E5FF; color: #080C10;
-  padding: var(--sp-sm) var(--sp-md);
-  display: flex; justify-content: space-between; align-items: center;
-  z-index: 999;
-  font-size: var(--fs-sm); font-weight: 600;
-}
+/* Infobar */
+.infobar{background:var(--border);border-radius:var(--r-sm);padding:var(--sp-sm) var(--sp-md);margin-top:var(--sp-sm);display:flex;justify-content:space-between;align-items:center;gap:var(--sp-sm)}
+.infobar-lbl{font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-xs)}
+.infobar-val{font-family:'DM Mono',monospace;font-size:var(--fs-xs)}
 
-/* ── Content padding ── */
-.content { padding: 0 var(--sp-sm); }
+/* ════════════════════════════════════════════
+   EDIT MODAL
+════════════════════════════════════════════ */
+#edit-ov{
+  position:fixed;inset:0;
+  background:#000000CC;
+  z-index:200;
+  display:none;flex-direction:column;justify-content:flex-end;
+}
+#edit-sheet{
+  background:#080C10;
+  border-radius:var(--r-xl) var(--r-xl) 0 0;
+  border:1px solid var(--border);border-bottom:none;
+  max-height:88vh;
+  display:flex;flex-direction:column;
+}
+/* In landscape, modal is centered panel instead */
+@media (orientation:landscape){
+  #edit-ov{justify-content:center;align-items:center}
+  #edit-sheet{
+    max-height:90vh;width:min(520px,90vw);
+    border-radius:var(--r-xl);border:1px solid var(--border);
+    animation:fadeIn .22s ease;
+  }
+  .edit-handle-wrap{display:none}
+}
+.edit-handle-wrap{display:flex;justify-content:center;padding:var(--sp-sm) 0 0}
+.edit-handle{width:clamp(28px,8vw,40px);height:4px;border-radius:999px;background:var(--border)}
+.edit-top{display:flex;justify-content:space-between;align-items:center;padding:var(--sp-sm) var(--sp-md) var(--sp-xs)}
+.edit-title{font-size:var(--fs-lg);font-weight:700}
+.edit-x{background:var(--border);border:none;color:#A0AFBF;width:clamp(28px,7vmin,36px);height:clamp(28px,7vmin,36px);border-radius:50%;font-size:var(--fs-md);display:flex;align-items:center;justify-content:center}
+.edit-tabs{display:flex;gap:var(--sp-xs);padding:var(--sp-xs) var(--sp-md);overflow-x:auto;flex-shrink:0}
+.etab{border:none;border-radius:999px;padding:clamp(6px,1.5vmin,9px) clamp(10px,3vmin,16px);font-family:'Syne',sans-serif;font-size:var(--fs-sm);white-space:nowrap;flex-shrink:0;transition:all .15s}
+.edit-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--sp-xs) var(--sp-md) var(--sp-sm);flex:1}
+.edit-foot{padding:0 var(--sp-md) calc(var(--sp-lg) + var(--safe-b));flex-shrink:0}
+.btn-save{width:100%;background:#F0F6FF;border:none;border-radius:var(--r-md);padding:clamp(12px,3vmin,16px) 0;font-family:'Syne',sans-serif;font-size:var(--fs-md);font-weight:700;color:#080C10}
+.ecard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--sp-sm);margin-bottom:var(--sp-xs)}
+.ecard-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-sm)}
+.ecard-nm{font-weight:700;font-size:var(--fs-md)}
+.btn-del{border:none;border-radius:var(--r-sm);padding:clamp(4px,1vmin,7px) clamp(8px,2.5vmin,14px);background:#FF6B6B22;color:#FF6B6B;font-size:var(--fs-sm)}
+.flbl{font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-xs);letter-spacing:1px;margin-bottom:4px}
+.finp{width:100%;background:#080C10;border:1px solid var(--border);border-radius:var(--r-sm);color:#F0F6FF;padding:clamp(10px,2.5vmin,14px);font-family:'DM Mono',monospace;font-size:var(--fs-md);outline:none;margin-bottom:var(--sp-sm);transition:border-color .15s}
+.finp:focus{border-color:#1E3545}
+.btn-add{width:100%;border-radius:var(--r-sm);padding:clamp(10px,2.5vmin,14px) 0;font-family:'DM Mono',monospace;font-size:var(--fs-sm)}
+
+/* Install banner */
+#ibanner{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:640px;background:var(--accent);color:#080C10;padding:var(--sp-sm) var(--sp-md);display:flex;justify-content:space-between;align-items:center;z-index:999;font-size:var(--fs-sm);font-weight:600}
 </style>
 </head>
 <body>
+
 <div id="app">
-  <div id="shell">
-    <div id="hdr"></div>
-    <div id="scroll"><div class="content fade-in" id="content"></div></div>
-    <nav id="nav"></nav>
+  <!-- Top header — always visible -->
+  <div id="hdr"></div>
+
+  <!-- Body: sidebar (landscape) + scroll area -->
+  <div id="body">
+    <div id="sidenav"></div>
+    <div id="scroll">
+      <div id="content" class="fade-in"></div>
+    </div>
   </div>
-  <div id="edit-overlay" style="display:none"></div>
+
+  <!-- Bottom nav — portrait only -->
+  <div id="botnav"></div>
+
+  <!-- Edit overlay -->
+  <div id="edit-ov"></div>
 </div>
 
 <script>
 'use strict';
-// ── Constants ─────────────────────────────────────────────────────────────────
-const USD_IDR = 16300;
-const CC = ["#00E5FF","#2979FF","#7C4DFF","#00B8D9","#0091B5"];
-const SC = ["#B9FF66","#8FD43A","#65AA10","#3B7F00","#A3E635"];
-const CAT = {Kripto:"#00E5FF",Saham:"#B9FF66",Emas:"#FFD166",Tabungan:"#FF6B6B",Cash:"#A78BFA"};
 
-const DEF = {
-  crypto:[
-    {id:"bitcoin", symbol:"BTC",name:"Bitcoin", amount:0.05},
-    {id:"ethereum",symbol:"ETH",name:"Ethereum",amount:0.8 },
-    {id:"solana",  symbol:"SOL",name:"Solana",  amount:10  },
-  ],
-  saham:[
-    {ticker:"BBCA",name:"BCA",   shares:100,priceIDR:10050},
-    {ticker:"TLKM",name:"Telkom",shares:500,priceIDR:3200 },
-    {ticker:"ASII",name:"Astra", shares:200,priceIDR:5225 },
-  ],
-  emas:     {grams:50},
-  tabungan: {principal:20000000,monthlyRate:0.008,months:6},
-  cash:     {amount:15000000},
+/* ════════════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════════════ */
+const USD_IDR=16300;
+const CC=["#00E5FF","#2979FF","#7C4DFF","#00B8D9","#0091B5"];
+const SC=["#B9FF66","#8FD43A","#65AA10","#3B7F00","#A3E635"];
+const CAT={Kripto:"#00E5FF",Saham:"#B9FF66",Emas:"#FFD166",Tabungan:"#FF6B6B",Cash:"#A78BFA"};
+const NAVS=[{id:'overview',ic:'⊞',lb:'Porto'},{id:'kripto',ic:'◈',lb:'Kripto'},{id:'saham',ic:'▲',lb:'Saham'},{id:'lainnya',ic:'◎',lb:'Lainnya'}];
+const DEF={
+  crypto:[{id:"bitcoin",symbol:"BTC",name:"Bitcoin",amount:0.05},{id:"ethereum",symbol:"ETH",name:"Ethereum",amount:0.8},{id:"solana",symbol:"SOL",name:"Solana",amount:10}],
+  saham:[{ticker:"BBCA",name:"BCA",shares:100,priceIDR:10050},{ticker:"TLKM",name:"Telkom",shares:500,priceIDR:3200},{ticker:"ASII",name:"Astra",shares:200,priceIDR:5225}],
+  emas:{grams:50},tabungan:{principal:20000000,monthlyRate:0.008,months:6},cash:{amount:15000000},
 };
 
-// ── Storage ───────────────────────────────────────────────────────────────────
-const loadP=()=>{try{const s=localStorage.getItem('pf3');return s?JSON.parse(s):DEF;}catch{return DEF;}};
-const saveP=p=>{try{localStorage.setItem('pf3',JSON.stringify(p));}catch{}};
+/* ════════════════════════════════════════════
+   STORAGE
+════════════════════════════════════════════ */
+const loadP=()=>{try{const s=localStorage.getItem('pf4');return s?JSON.parse(s):DEF;}catch{return DEF;}};
+const saveP=p=>{try{localStorage.setItem('pf4',JSON.stringify(p));}catch{}};
 
-// ── Format ────────────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   FORMAT
+════════════════════════════════════════════ */
 const fi=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
 const fc=n=>{if(n>=1e12)return'Rp '+(n/1e12).toFixed(2)+' T';if(n>=1e9)return'Rp '+(n/1e9).toFixed(2)+' M';if(n>=1e6)return'Rp '+(n/1e6).toFixed(2)+' jt';return fi(n);};
-const cp=(p,r,m)=>p*Math.pow(1+r,m);
+const cpd=(p,r,m)=>p*Math.pow(1+r,m);
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let S={
-  p:loadP(), prices:{}, gold:0, loading:true,
-  updated:null, tab:'overview',
-  editing:false, esec:'kripto', draft:null,
-};
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let S={p:loadP(),prices:{},gold:0,loading:true,updated:null,tab:'overview',editing:false,esec:'kripto',draft:null};
 
-// ── Compute ───────────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   COMPUTE
+════════════════════════════════════════════ */
 function compute(){
   const{p,prices,gold}=S;
   const cv=p.crypto.map((c,i)=>{const pr=prices[c.id];const u=pr?.usd||0;return{...c,usd:u,val:u*USD_IDR*c.amount,ch:pr?.usd_24h_change||0,col:CC[i%CC.length]};});
   const sv=p.saham.map((s,i)=>({...s,val:s.shares*s.priceIDR,col:SC[i%SC.length]}));
-  const ev=gold*p.emas.grams;
-  const tv=cp(p.tabungan.principal,p.tabungan.monthlyRate,p.tabungan.months);
-  const cav=p.cash.amount;
-  const tc=cv.reduce((a,x)=>a+x.val,0);
-  const ts=sv.reduce((a,x)=>a+x.val,0);
+  const ev=gold*p.emas.grams, tv=cpd(p.tabungan.principal,p.tabungan.monthlyRate,p.tabungan.months), cav=p.cash.amount;
+  const tc=cv.reduce((a,x)=>a+x.val,0), ts=sv.reduce((a,x)=>a+x.val,0);
   const tot=tc+ts+ev+tv+cav||1;
-  const catPie=[
+  const catP=[
     {name:'Kripto',  val:tc, col:CAT.Kripto,  pct:tc/tot*100},
     {name:'Saham',   val:ts, col:CAT.Saham,   pct:ts/tot*100},
     {name:'Emas',    val:ev, col:CAT.Emas,    pct:ev/tot*100},
     {name:'Tabungan',val:tv, col:CAT.Tabungan,pct:tv/tot*100},
     {name:'Cash',    val:cav,col:CAT.Cash,    pct:cav/tot*100},
   ].filter(d=>d.val>0);
-  const detPie=[
+  const detP=[
     ...cv.map(c=>({name:c.symbol,val:c.val,col:c.col,pct:c.val/tot*100})),
     ...sv.map(s=>({name:s.ticker,val:s.val,col:s.col,pct:s.val/tot*100})),
-    {name:'Emas',    val:ev, col:CAT.Emas,    pct:ev/tot*100},
-    {name:'Tabungan',val:tv, col:CAT.Tabungan,pct:tv/tot*100},
-    {name:'Cash',    val:cav,col:CAT.Cash,    pct:cav/tot*100},
+    {name:'Emas',val:ev,col:CAT.Emas,pct:ev/tot*100},{name:'Tabungan',val:tv,col:CAT.Tabungan,pct:tv/tot*100},{name:'Cash',val:cav,col:CAT.Cash,pct:cav/tot*100},
   ].filter(d=>d.val>0);
   const wch=tc>0?cv.reduce((a,c)=>a+c.ch*c.val,0)/tot:0;
-  return{cv,sv,ev,tv,cav,tc,ts,tot,catPie,detPie,wch};
+  return{cv,sv,ev,tv,cav,tc,ts,tot,catP,detP,wch};
 }
 
-// ── Canvas donut ──────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   CANVAS DONUT
+════════════════════════════════════════════ */
 function drawDonut(id,data){
-  const el=document.getElementById(id);
-  if(!el)return;
-  const dpr=window.devicePixelRatio||1;
-  const W=el.offsetWidth, H=el.offsetHeight;
+  const el=document.getElementById(id);if(!el)return;
+  const dpr=window.devicePixelRatio||1, W=el.offsetWidth, H=el.offsetHeight;
   if(!W||!H)return;
-  el.width=W*dpr; el.height=H*dpr;
-  const ctx=el.getContext('2d');
-  ctx.scale(dpr,dpr);
-  ctx.clearRect(0,0,W,H);
-  const cx=W/2, cy=H/2;
-  const R=Math.min(W,H)*0.44;
-  const r=R*0.52;
+  el.width=W*dpr;el.height=H*dpr;
+  const ctx=el.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+  const cx=W/2,cy=H/2,R=Math.min(W,H)*0.44,r=R*0.52;
   const tot=data.reduce((a,d)=>a+d.val,0)||1;
   let ang=-Math.PI/2;
-  const gap=0.025;
   data.forEach(d=>{
-    const sw=(d.val/tot)*Math.PI*2-gap;
-    if(sw<=0)return;
-    ctx.beginPath();
-    ctx.arc(cx,cy,R,ang,ang+sw);
-    ctx.arc(cx,cy,r,ang+sw,ang,true);
-    ctx.closePath();
-    ctx.fillStyle=d.col;
-    ctx.fill();
-    ang+=sw+gap;
+    const sw=(d.val/tot)*Math.PI*2-0.025;if(sw<=0)return;
+    ctx.beginPath();ctx.arc(cx,cy,R,ang,ang+sw);ctx.arc(cx,cy,r,ang+sw,ang,true);ctx.closePath();
+    ctx.fillStyle=d.col;ctx.fill();ang+=sw+0.025;
   });
-  // Subtle center glow
-  const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
-  grad.addColorStop(0,'#0D111744');
-  grad.addColorStop(1,'transparent');
-  ctx.beginPath();ctx.arc(cx,cy,r-1,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
+  // Inner glow
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+  g.addColorStop(0,'#0D111755');g.addColorStop(1,'transparent');
+  ctx.beginPath();ctx.arc(cx,cy,r-1,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
 }
 
-// ── Legend HTML ───────────────────────────────────────────────────────────────
-const leg=data=>`<div class="legend">${data.map(d=>`
-  <div class="legend-item">
-    <div class="legend-dot" style="background:${d.col}"></div>
-    <span class="legend-name">${d.name}</span>
-    <span class="legend-pct" style="color:${d.col}">${d.pct.toFixed(1)}%</span>
+/* ════════════════════════════════════════════
+   HTML HELPERS
+════════════════════════════════════════════ */
+const isLS=()=>window.innerWidth>window.innerHeight;
+
+const legHTML=data=>`<div class="legend">${data.map(d=>`
+  <div class="leg-item">
+    <div class="leg-dot" style="background:${d.col}"></div>
+    <span class="leg-txt">${d.name}</span>
+    <span class="leg-pct" style="color:${d.col}">${d.pct.toFixed(1)}%</span>
   </div>`).join('')}</div>`;
 
-// ── Render ────────────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════ */
 let raf=false;
 function render(){if(raf)return;raf=true;requestAnimationFrame(()=>{raf=false;_render();});}
 
 function _render(){
-  const C=compute();
-  const{cv,sv,ev,tv,cav,tc,ts,tot,catPie,detPie,wch}=C;
-  const p=S.p;
+  const C=compute(),{cv,sv,ev,tv,cav,tc,ts,tot,catP,detP,wch}=C,p=S.p;
+  const ls=isLS();
 
-  // Header
+  /* ── Header ── */
   document.getElementById('hdr').innerHTML=`
     <div>
       <div class="hdr-logo">◈ PORTO<span>FOLIO</span></div>
       <div class="hdr-sub">${S.updated?'Update '+S.updated.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}):'Memuat...'}</div>
     </div>
     <div class="hdr-btns">
-      <button class="btn-icon" onclick="fetchP()"
-        style="background:${S.loading?'#1E2530':'#00E5FF11'};border-color:${S.loading?'#1E2530':'#00E5FF44'};color:${S.loading?'#556070':'#00E5FF'}">
-        <span style="${S.loading?'display:inline-block':''}${S.loading?' class=spin':''}">⟳</span>
-      </button>
-      <button class="btn-icon" onclick="openEdit()"
+      <button class="btn-hdr" onclick="fetchP()"
+        style="background:${S.loading?'#1E2530':'#00E5FF11'};border-color:${S.loading?'#1E2530':'#00E5FF44'};color:${S.loading?'#556070':'#00E5FF'}">⟳</button>
+      <button class="btn-hdr" onclick="openEdit()"
         style="background:#F0F6FF11;border-color:#F0F6FF22;color:#F0F6FF">✎ Edit</button>
     </div>`;
 
-  // Nav
-  const NAVS=[{id:'overview',ic:'⊞',lb:'Porto'},{id:'kripto',ic:'◈',lb:'Kripto'},{id:'saham',ic:'▲',lb:'Saham'},{id:'lainnya',ic:'◎',lb:'Lainnya'}];
-  document.getElementById('nav').innerHTML=NAVS.map(n=>`
-    <button class="nav-btn${S.tab===n.id?' active':''}" onclick="setTab('${n.id}')">
-      <span class="nav-icon">${n.ic}</span>
-      <span class="nav-lbl">${n.lb}</span>
+  /* ── Side nav (landscape) ── */
+  document.getElementById('sidenav').innerHTML=NAVS.map(n=>`
+    <button class="side-btn${S.tab===n.id?' active':''}" onclick="setTab('${n.id}')">
+      <span class="side-icon">${n.ic}</span>
+      <span class="side-lbl">${n.lb}</span>
     </button>`).join('');
 
-  // Hero + chips
+  /* ── Bottom nav (portrait) ── */
+  document.getElementById('botnav').innerHTML=NAVS.map(n=>`
+    <button class="bot-btn${S.tab===n.id?' active':''}" onclick="setTab('${n.id}')">
+      <span class="bot-icon">${n.ic}</span>
+      <span class="bot-lbl">${n.lb}</span>
+    </button>`).join('');
+
+  /* ── Hero ── */
   const hero=`
     <div class="hero">
-      <div class="hero-glow"></div>
-      <div class="hero-label">TOTAL PORTOFOLIO</div>
-      <div class="hero-value">${fc(tot)}</div>
+      <div class="hero-lbl">TOTAL PORTOFOLIO</div>
+      <div class="hero-val">${fc(tot)}</div>
       <div class="hero-meta">
-        <span class="hero-change" style="color:${wch>=0?'#B9FF66':'#FF6B6B'}">${wch>=0?'▲':'▼'} ${Math.abs(wch).toFixed(2)}% kripto 24j</span>
-        <span class="live-pill">● LIVE</span>
+        <span class="hero-ch" style="color:${wch>=0?'#B9FF66':'#FF6B6B'}">${wch>=0?'▲':'▼'} ${Math.abs(wch).toFixed(2)}% kripto 24j</span>
+        <span class="pill">● LIVE</span>
       </div>
-    </div>
-    <div class="chips">
-      ${catPie.map(c=>`
-      <div class="chip" style="border:1px solid ${c.col}33">
-        <div class="chip-cat" style="color:${c.col}">${c.name.toUpperCase()}</div>
-        <div class="chip-val">${fc(c.val)}</div>
-        <div class="chip-pct">${c.pct.toFixed(1)}%</div>
-      </div>`).join('')}
     </div>`;
 
-  // Tab content
+  /* ── Chips ── */
+  const chips=`<div class="chips">
+    ${catP.map(c=>`
+    <div class="chip" style="border-color:${c.col}33">
+      <div class="chip-cat" style="color:${c.col}">${c.name.toUpperCase()}</div>
+      <div class="chip-val">${fc(c.val)}</div>
+      <div class="chip-pct">${c.pct.toFixed(1)}%</div>
+    </div>`).join('')}
+  </div>`;
+
+  /* ── Tab content ── */
   let tab='';
+
   if(S.tab==='overview'){
-    tab=`
+    // In landscape: 2-col grid wrapper
+    tab=`<div class="${ls?'ls-grid':''}">
       <div class="card">
-        <span class="card-lbl">DIVERSIFIKASI KATEGORI</span>
+        <div class="card-hdr"><span class="card-lbl">DIVERSIFIKASI KATEGORI</span></div>
         <div class="chart-wrap"><canvas class="donut" id="d1"></canvas></div>
-        ${leg(catPie)}
+        ${legHTML(catP)}
       </div>
       <div class="card">
-        <span class="card-lbl">DIVERSIFIKASI PER ASET</span>
+        <div class="card-hdr"><span class="card-lbl">DIVERSIFIKASI PER ASET</span></div>
         <div class="chart-wrap"><canvas class="donut" id="d2"></canvas></div>
-        ${leg(detPie)}
+        ${legHTML(detP)}
       </div>
-      <div class="card">
-        <span class="card-lbl">DISTRIBUSI NILAI</span>
-        ${catPie.map(c=>`
+      <div class="card ${ls?'ls-full':''}">
+        <div class="card-hdr"><span class="card-lbl">DISTRIBUSI NILAI</span></div>
+        ${catP.map(c=>`
         <div class="bar-row">
           <div class="bar-hdr">
             <span class="bar-name" style="color:${c.col}">${c.name}</span>
             <span class="bar-val">${fc(c.val)} <span style="color:#556070">(${c.pct.toFixed(1)}%)</span></span>
           </div>
-          <div class="bar-track">
-            <div class="bar-fill" style="width:${c.pct}%;background:linear-gradient(90deg,${c.col},${c.col}66)"></div>
-          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${c.pct}%;background:linear-gradient(90deg,${c.col},${c.col}66)"></div></div>
         </div>`).join('')}
-      </div>`;
+      </div>
+    </div>`;
   }
+
   if(S.tab==='kripto'){
-    tab=`
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-sm)">
-          <span class="card-lbl" style="margin:0">ASET KRIPTO</span>
-          <span style="font-family:'DM Mono',monospace;color:${CAT.Kripto};font-size:var(--fs-md);font-weight:600">${fc(tc)}</span>
-        </div>
-        ${cv.map(c=>`
-        <div class="asset-row">
-          <div style="display:flex;align-items:center;gap:var(--sp-sm)">
-            <div class="asset-icon" style="background:${c.col+'22'};color:${c.col}">${c.symbol}</div>
-            <div>
-              <div class="asset-name">${c.name}</div>
-              <div class="asset-sub">${c.amount} ${c.symbol}</div>
-              <div class="asset-sub">$${c.usd.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-            </div>
-          </div>
+    tab=`<div class="card">
+      <div class="card-hdr">
+        <span class="card-lbl">ASET KRIPTO</span>
+        <span class="card-total" style="color:${CAT.Kripto}">${fc(tc)}</span>
+      </div>
+      ${cv.map(c=>`
+      <div class="asset-row">
+        <div class="asset-left">
+          <div class="asset-icon" style="background:${c.col+'22'};color:${c.col}">${c.symbol}</div>
           <div>
-            <div class="asset-val">${fc(c.val)}</div>
-            <div class="asset-change" style="color:${c.ch>=0?'#B9FF66':'#FF6B6B'}">${c.ch>=0?'▲':'▼'} ${Math.abs(c.ch).toFixed(2)}%</div>
+            <div class="asset-name">${c.name}</div>
+            <div class="asset-sub">${c.amount} ${c.symbol}</div>
+            <div class="asset-sub">$${c.usd.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
           </div>
-        </div>`).join('')}
-      </div>`;
-  }
-  if(S.tab==='saham'){
-    tab=`
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-sm)">
-          <span class="card-lbl" style="margin:0">PORTOFOLIO SAHAM</span>
-          <span style="font-family:'DM Mono',monospace;color:${CAT.Saham};font-size:var(--fs-md);font-weight:600">${fc(ts)}</span>
         </div>
-        ${sv.map(s=>`
-        <div class="asset-row">
-          <div style="display:flex;align-items:center;gap:var(--sp-sm)">
-            <div class="asset-icon" style="background:${s.col+'22'};color:${s.col}">${s.ticker}</div>
-            <div>
-              <div class="asset-name" style="color:${s.col}">${s.ticker}</div>
-              <div class="asset-sub" style="color:#A0AFBF">${s.name}</div>
-              <div class="asset-sub">${(s.shares/100).toFixed(0)} lot · ${fi(s.priceIDR)}/lbr</div>
-            </div>
-          </div>
-          <div class="asset-val">${fc(s.val)}</div>
-        </div>`).join('')}
-      </div>`;
+        <div class="asset-right">
+          <div class="asset-val">${fc(c.val)}</div>
+          <div class="asset-ch" style="color:${c.ch>=0?'#B9FF66':'#FF6B6B'}">${c.ch>=0?'▲':'▼'} ${Math.abs(c.ch).toFixed(2)}%</div>
+        </div>
+      </div>`).join('')}
+    </div>`;
   }
+
+  if(S.tab==='saham'){
+    tab=`<div class="card">
+      <div class="card-hdr">
+        <span class="card-lbl">PORTOFOLIO SAHAM</span>
+        <span class="card-total" style="color:${CAT.Saham}">${fc(ts)}</span>
+      </div>
+      ${sv.map(s=>`
+      <div class="asset-row">
+        <div class="asset-left">
+          <div class="asset-icon" style="background:${s.col+'22'};color:${s.col}">${s.ticker}</div>
+          <div>
+            <div class="asset-name" style="color:${s.col}">${s.ticker}</div>
+            <div class="asset-sub" style="color:#A0AFBF">${s.name}</div>
+            <div class="asset-sub">${(s.shares/100).toFixed(0)} lot · ${fi(s.priceIDR)}/lbr</div>
+          </div>
+        </div>
+        <div class="asset-right"><div class="asset-val">${fc(s.val)}</div></div>
+      </div>`).join('')}
+    </div>`;
+  }
+
   if(S.tab==='lainnya'){
-    tab=`
+    const ls2col=ls?'style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-sm)"':'';
+    tab=`<div ${ls2col}>
       <div class="card">
-        <span class="card-lbl">EMAS FISIK</span>
+        <div class="card-hdr"><span class="card-lbl">EMAS FISIK</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
-            <div style="font-size:var(--fs-xl);font-weight:800">${p.emas.grams}<span style="font-size:var(--fs-sm);color:#556070"> gram</span></div>
-            <div style="font-family:'DM Mono',monospace;color:#556070;font-size:var(--fs-xs);margin-top:4px">${fc(S.gold)}/gram</div>
+            <div style="font-size:var(--fs-xl);font-weight:800">${p.emas.grams}<span style="font-size:var(--fs-sm);color:var(--muted)"> gram</span></div>
+            <div class="asset-sub" style="margin-top:4px">${fc(S.gold)}/gram</div>
           </div>
           <div style="color:${CAT.Emas};font-size:var(--fs-lg);font-weight:700">${fc(ev)}</div>
         </div>
-        <div style="background:#1E2530;border-radius:var(--r-sm);padding:var(--sp-sm) var(--sp-md);margin-top:var(--sp-sm);display:flex;justify-content:space-between">
-          <span style="font-family:'DM Mono',monospace;color:#556070;font-size:var(--fs-xs)">Spot XAU/IDR per troy oz</span>
-          <span style="font-family:'DM Mono',monospace;color:${CAT.Emas};font-size:var(--fs-xs)">${fc(S.gold*31.1035)}</span>
+        <div class="infobar">
+          <span class="infobar-lbl">Spot XAU/IDR per troy oz</span>
+          <span class="infobar-val" style="color:${CAT.Emas}">${fc(S.gold*31.1035)}</span>
         </div>
       </div>
       <div class="card">
-        <span class="card-lbl">TABUNGAN BERBUNGA</span>
+        <div class="card-hdr"><span class="card-lbl">TABUNGAN BERBUNGA</span></div>
         <div class="info-grid">
           <div class="info-box"><div class="info-lbl">POKOK</div><div class="info-val">${fc(p.tabungan.principal)}</div></div>
           <div class="info-box"><div class="info-lbl">BUNGA/BLN</div><div class="info-val" style="color:${CAT.Tabungan}">${(p.tabungan.monthlyRate*100).toFixed(1)}%</div></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
-            <div style="font-family:'DM Mono',monospace;color:#556070;font-size:var(--fs-xs)">Nilai setelah ${p.tabungan.months} bulan</div>
+            <div class="asset-sub">Nilai setelah ${p.tabungan.months} bulan</div>
             <div style="font-size:var(--fs-lg);font-weight:700;margin-top:4px">${fc(tv)}</div>
           </div>
           <div style="font-family:'DM Mono',monospace;color:${CAT.Tabungan};font-size:var(--fs-md);font-weight:600">+${fc(tv-p.tabungan.principal)}</div>
         </div>
       </div>
       <div class="card">
-        <span class="card-lbl">CASH / TUNAI</span>
+        <div class="card-hdr"><span class="card-lbl">CASH / TUNAI</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:var(--fs-xl);font-weight:800;color:${CAT.Cash}">${fc(cav)}</div>
-          <div style="font-family:'DM Mono',monospace;color:#556070;font-size:var(--fs-md)">${(cav/tot*100).toFixed(1)}% porto</div>
+          <div style="font-family:'DM Mono',monospace;color:var(--muted);font-size:var(--fs-md)">${(cav/tot*100).toFixed(1)}% porto</div>
         </div>
-      </div>`;
+      </div>
+    </div>`;
   }
 
-  document.getElementById('content').innerHTML=hero+tab;
+  document.getElementById('content').innerHTML=hero+chips+tab;
 
-  // Draw donuts
+  // Draw donuts after paint
   if(S.tab==='overview'){
-    requestAnimationFrame(()=>{
-      drawDonut('d1',catPie);
-      drawDonut('d2',detPie);
-    });
+    requestAnimationFrame(()=>{drawDonut('d1',catP);drawDonut('d2',detP);});
   }
 
-  // Edit modal
   renderEdit();
 }
 
-// ── Edit modal render ─────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   EDIT MODAL
+════════════════════════════════════════════ */
 function renderEdit(){
-  const ov=document.getElementById('edit-overlay');
+  const ov=document.getElementById('edit-ov');
   if(!S.editing||!S.draft){ov.style.display='none';return;}
   ov.style.display='flex';
-  const d=S.draft, sec=S.esec;
-  const secs=['kripto','saham','emas','tabungan','cash'];
+  const d=S.draft,sec=S.esec,secs=['kripto','saham','emas','tabungan','cash'];
 
   const field=(id,lbl,val,num=false)=>`
-    <div>
-      <div class="field-lbl">${lbl.toUpperCase()}</div>
-      <input class="field-inp" id="${id}" type="text" inputmode="${num?'decimal':'text'}" value="${val}"
-        oninput="ei('${id}',this.value)"/>
-    </div>`;
+    <div><div class="flbl">${lbl.toUpperCase()}</div>
+    <input class="finp" id="${id}" inputmode="${num?'decimal':'text'}" value="${val}" oninput="ei('${id}',this.value)"/></div>`;
 
   let body='';
   if(sec==='kripto'){
     body=d.crypto.map((c,i)=>`
-      <div class="edit-item-card">
-        <div class="edit-item-hdr">
-          <span class="edit-item-title" style="color:${CAT.Kripto}">${c.symbol||'Baru'}</span>
-          <button class="btn-del" onclick="dc(${i})">Hapus</button>
-        </div>
-        ${field(`ci${i}0`,'CoinGecko ID (cth: bitcoin)',c.id)}
-        ${field(`ci${i}1`,'Symbol',c.symbol)}
-        ${field(`ci${i}2`,'Nama',c.name)}
-        ${field(`ci${i}3`,'Jumlah Koin',c.amount,true)}
+      <div class="ecard">
+        <div class="ecard-top"><span class="ecard-nm" style="color:${CAT.Kripto}">${c.symbol||'Baru'}</span><button class="btn-del" onclick="dc(${i})">Hapus</button></div>
+        ${field(`ci${i}0`,'CoinGecko ID (cth: bitcoin)',c.id)}${field(`ci${i}1`,'Symbol',c.symbol)}${field(`ci${i}2`,'Nama',c.name)}${field(`ci${i}3`,'Jumlah Koin',c.amount,true)}
       </div>`).join('')+
       `<button class="btn-add" style="border:1px dashed ${CAT.Kripto}55;background:${CAT.Kripto}11;color:${CAT.Kripto}" onclick="ac()">+ Tambah Kripto</button>`;
   }
   if(sec==='saham'){
     body=d.saham.map((s,i)=>`
-      <div class="edit-item-card">
-        <div class="edit-item-hdr">
-          <span class="edit-item-title" style="color:${CAT.Saham}">${s.ticker||'Baru'}</span>
-          <button class="btn-del" onclick="ds(${i})">Hapus</button>
-        </div>
-        ${field(`si${i}0`,'Kode Saham',s.ticker)}
-        ${field(`si${i}1`,'Nama Perusahaan',s.name)}
-        ${field(`si${i}2`,'Jumlah Lembar',s.shares,true)}
-        ${field(`si${i}3`,'Harga per Lembar (Rp)',s.priceIDR,true)}
+      <div class="ecard">
+        <div class="ecard-top"><span class="ecard-nm" style="color:${CAT.Saham}">${s.ticker||'Baru'}</span><button class="btn-del" onclick="ds(${i})">Hapus</button></div>
+        ${field(`si${i}0`,'Kode Saham',s.ticker)}${field(`si${i}1`,'Nama Perusahaan',s.name)}${field(`si${i}2`,'Jumlah Lembar',s.shares,true)}${field(`si${i}3`,'Harga per Lembar (Rp)',s.priceIDR,true)}
       </div>`).join('')+
-      `<button class="btn-add" style="border:1px dashed ${CAT.Saham}55;background:${CAT.Saham}11;color:${CAT.Saham}" onclick="as()">+ Tambah Saham</button>`;
+      `<button class="btn-add" style="border:1px dashed ${CAT.Saham}55;background:${CAT.Saham}11;color:${CAT.Saham}" onclick="as_()">+ Tambah Saham</button>`;
   }
-  if(sec==='emas') body=field('eg','Jumlah Gram',d.emas.grams,true);
+  if(sec==='emas')     body=field('eg','Jumlah Gram',d.emas.grams,true);
   if(sec==='tabungan') body=field('tp','Pokok (Rp)',d.tabungan.principal,true)+field('tr','Bunga/Bulan (cth: 0.008)',d.tabungan.monthlyRate,true)+field('tm','Sudah Berjalan (Bulan)',d.tabungan.months,true);
-  if(sec==='cash') body=field('ca','Jumlah Cash (Rp)',d.cash.amount,true);
+  if(sec==='cash')     body=field('ca','Jumlah Cash (Rp)',d.cash.amount,true);
 
   ov.innerHTML=`
-    <div onclick="closeEdit()"></div>
+    <div style="flex:1;cursor:pointer" onclick="closeEdit()"></div>
     <div id="edit-sheet" class="slide-up" onclick="event.stopPropagation()">
       <div class="edit-handle-wrap"><div class="edit-handle"></div></div>
-      <div class="edit-hdr">
+      <div class="edit-top">
         <span class="edit-title">Edit Portofolio</span>
-        <button class="edit-close" onclick="closeEdit()">✕</button>
+        <button class="edit-x" onclick="closeEdit()">✕</button>
       </div>
       <div class="edit-tabs">
-        ${secs.map(s=>`<button class="edit-tab" style="background:${sec===s?'#F0F6FF':'#1E2530'};color:${sec===s?'#080C10':'#556070'};font-weight:${sec===s?700:400}" onclick="esec('${s}')">${s[0].toUpperCase()+s.slice(1)}</button>`).join('')}
+        ${secs.map(s=>`<button class="etab" style="background:${sec===s?'#F0F6FF':'#1E2530'};color:${sec===s?'#080C10':'#556070'};font-weight:${sec===s?700:400}" onclick="esec('${s}')">${s[0].toUpperCase()+s.slice(1)}</button>`).join('')}
       </div>
       <div class="edit-body">${body}</div>
-      <div class="edit-footer"><button class="btn-save" onclick="saveEdit()">Simpan Perubahan</button></div>
+      <div class="edit-foot"><button class="btn-save" onclick="saveEdit()">Simpan Perubahan</button></div>
     </div>`;
-
-  // Stretch overlay bg
-  ov.firstElementChild.style.cssText='flex:1;cursor:pointer';
 }
 
-// ── Edit handlers ─────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   EVENT HANDLERS
+════════════════════════════════════════════ */
+function setTab(t){S.tab=t;render();}
 function openEdit(){S.draft=JSON.parse(JSON.stringify(S.p));S.editing=true;renderEdit();}
 function closeEdit(){S.editing=false;S.draft=null;renderEdit();}
 function esec(s){S.esec=s;renderEdit();}
 function ei(id,v){
-  if(!S.draft)return;
-  const d=S.draft;
+  if(!S.draft)return;const d=S.draft;
   if(id.startsWith('ci')){const i=+id[2],f=+id[3];const fs=['id','symbol','name','amount'];if(f===3)d.crypto[i].amount=parseFloat(v)||0;else d.crypto[i][fs[f]]=v;}
   else if(id.startsWith('si')){const i=+id[2],f=+id[3];const fs=['ticker','name','shares','priceIDR'];if(f>=2)d.saham[i][fs[f]]=parseFloat(v)||0;else d.saham[i][fs[f]]=v;}
   else if(id==='eg')d.emas.grams=parseFloat(v)||0;
@@ -765,13 +722,13 @@ function ei(id,v){
 }
 function ac(){S.draft.crypto.push({id:'',symbol:'',name:'',amount:0});renderEdit();}
 function dc(i){S.draft.crypto.splice(i,1);renderEdit();}
-function as(){S.draft.saham.push({ticker:'',name:'',shares:0,priceIDR:0});renderEdit();}
+function as_(){S.draft.saham.push({ticker:'',name:'',shares:0,priceIDR:0});renderEdit();}
 function ds(i){S.draft.saham.splice(i,1);renderEdit();}
 function saveEdit(){S.p=JSON.parse(JSON.stringify(S.draft));saveP(S.p);S.editing=false;S.draft=null;render();setTimeout(fetchP,200);}
-function setTab(t){S.tab=t;render();}
 
-// ── Fetch prices ──────────────────────────────────────────────────────────────
-let ft=null;
+/* ════════════════════════════════════════════
+   FETCH PRICES
+════════════════════════════════════════════ */
 async function fetchP(){
   S.loading=true;render();
   try{
@@ -792,36 +749,56 @@ async function fetchP(){
 }
 function fetchPrices(){return fetchP();}
 
-// ── Resize observer: redraw charts on size change ────────────────────────────
+/* ════════════════════════════════════════════
+   ORIENTATION CHANGE
+════════════════════════════════════════════ */
+// Re-render on orientation/resize so layout switches correctly
+let orientTimer=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(orientTimer);
+  orientTimer=setTimeout(()=>{
+    render();
+    // Redraw charts after layout settles
+    if(S.tab==='overview'){
+      setTimeout(()=>{const C=compute();drawDonut('d1',C.catP);drawDonut('d2',C.detP);},60);
+    }
+  },80);
+});
+
+// ResizeObserver for chart redraws
 const ro=new ResizeObserver(()=>{
-  if(S.tab==='overview'){const C=compute();drawDonut('d1',C.catPie);drawDonut('d2',C.detPie);}
+  if(S.tab==='overview'){const C=compute();drawDonut('d1',C.catP);drawDonut('d2',C.detP);}
 });
 ro.observe(document.getElementById('scroll'));
 
-// ── Service Worker ────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   SERVICE WORKER
+════════════════════════════════════════════ */
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 
-// ── Install prompt ────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   INSTALL PROMPT
+════════════════════════════════════════════ */
 let dp=null;
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();dp=e;
-  if(!document.getElementById('install-banner')){
-    const b=document.createElement('div');
-    b.id='install-banner';
-    b.innerHTML=`<span>📲 Install ke homescreen</span><div style="display:flex;gap:8px">
-      <button onclick="iapp()" style="background:#080C10;color:#00E5FF;border:none;border-radius:8px;padding:6px 12px;font-weight:700;font-size:var(--fs-xs);font-family:'Syne',sans-serif">Install</button>
-      <button onclick="this.parentElement.parentElement.remove()" style="background:transparent;border:none;color:#080C10;font-size:20px;line-height:1">✕</button></div>`;
-    document.body.prepend(b);
-  }
+  if(document.getElementById('ibanner'))return;
+  const b=document.createElement('div');b.id='ibanner';
+  b.innerHTML=`<span>📲 Install ke homescreen</span><div style="display:flex;gap:8px">
+    <button onclick="iapp()" style="background:#080C10;color:#00E5FF;border:none;border-radius:8px;padding:5px 12px;font-weight:700;font-size:12px;font-family:'Syne',sans-serif">Install</button>
+    <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#080C10;font-size:20px;line-height:1">✕</button></div>`;
+  document.body.prepend(b);
 });
-function iapp(){if(dp){dp.prompt();dp.userChoice.then(()=>{dp=null;document.getElementById('install-banner')?.remove();});}}
+function iapp(){if(dp){dp.prompt();dp.userChoice.then(()=>{dp=null;document.getElementById('ibanner')?.remove();});}}
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════ */
 render();
 fetchP();
-ft=setInterval(fetchP,5*60*1000);
+setInterval(fetchP,5*60*1000);
 </script>
 </body>
 </html>
