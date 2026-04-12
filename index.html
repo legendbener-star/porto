@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#080C10"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Porto"/>
+<meta name="description" content="Pantau portofolio aset kamu secara real-time"/>
+<title>Portofolio Tracker</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<link rel="icon" type="image/png" href="icon-192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body{background:#080C10;color:#F0F6FF;font-family:'Syne',sans-serif;overscroll-behavior:none;height:100%}
+  body{overflow-x:hidden}
+  ::-webkit-scrollbar{display:none}
+  input{-webkit-appearance:none;appearance:none}
+  button{-webkit-appearance:none;appearance:none;cursor:pointer}
+  .slide-up{animation:slideUp .3s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .fade-in{animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .chip-scroll::-webkit-scrollbar{display:none}
+  .safe-bottom{padding-bottom:env(safe-area-inset-bottom,0px)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ── Inline Recharts from CDN or fallback ─────────────────────────────────────
+// We'll use vanilla JS + Canvas for charts to avoid CDN dependency issues
+
+const USD_IDR = 16300;
+const CRYPTO_COLORS = ["#00E5FF","#2979FF","#7C4DFF","#00B8D9","#0091B5"];
+const SAHAM_COLORS  = ["#B9FF66","#8FD43A","#65AA10","#3B7F00","#A3E635"];
+const CAT = { Kripto:"#00E5FF", Saham:"#B9FF66", Emas:"#FFD166", Tabungan:"#FF6B6B", Cash:"#A78BFA" };
+
+const DEFAULT_PORTFOLIO = {
+  crypto:[
+    {id:"bitcoin",  symbol:"BTC",name:"Bitcoin",  amount:0.05},
+    {id:"ethereum", symbol:"ETH",name:"Ethereum", amount:0.8 },
+    {id:"solana",   symbol:"SOL",name:"Solana",   amount:10  },
+  ],
+  saham:[
+    {ticker:"BBCA",name:"BCA",   shares:100,priceIDR:10050},
+    {ticker:"TLKM",name:"Telkom",shares:500,priceIDR:3200 },
+    {ticker:"ASII",name:"Astra", shares:200,priceIDR:5225 },
+  ],
+  emas:     {grams:50},
+  tabungan: {principal:20000000,monthlyRate:0.008,months:6},
+  cash:     {amount:15000000},
+};
+
+// ── Persist to localStorage ───────────────────────────────────────────────────
+function loadPortfolio(){
+  try{const s=localStorage.getItem('portfolio_v2');return s?JSON.parse(s):DEFAULT_PORTFOLIO;}
+  catch{return DEFAULT_PORTFOLIO;}
+}
+function savePortfolio(p){try{localStorage.setItem('portfolio_v2',JSON.stringify(p));}catch{}}
+
+// ── Format helpers ────────────────────────────────────────────────────────────
+const fmtIDR = n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+const fmtC = n=>{
+  if(n>=1e12)return'Rp '+(n/1e12).toFixed(2)+' T';
+  if(n>=1e9) return'Rp '+(n/1e9).toFixed(2)+' M';
+  if(n>=1e6) return'Rp '+(n/1e6).toFixed(2)+' jt';
+  return fmtIDR(n);
+};
+const compound=(p,r,m)=>p*Math.pow(1+r,m);
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let state = {
+  portfolio: loadPortfolio(),
+  prices: {},
+  goldPrice: 0,
+  loading: true,
+  updated: null,
+  tab: 'overview',
+  editing: false,
+  editSection: 'kripto',
+  editDraft: null,
+};
+
+// ── Fetch prices ──────────────────────────────────────────────────────────────
+let fetchTimer = null;
+async function fetchPrices(){
+  state.loading = true; render();
+  try{
+    const ids = state.portfolio.crypto.map(c=>c.id).filter(Boolean).join(',');
+    const [cr,gr] = await Promise.allSettled([
+      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`),
+      fetch('https://api.metals.live/v1/spot/gold'),
+    ]);
+    if(cr.status==='fulfilled'&&cr.value.ok) state.prices=await cr.value.json();
+    else state.prices={bitcoin:{usd:87500,usd_24h_change:1.2},ethereum:{usd:3400,usd_24h_change:-0.8},solana:{usd:185,usd_24h_change:2.1}};
+    if(gr.status==='fulfilled'&&gr.value.ok){const gd=await gr.value.json();state.goldPrice=(gd[0]?.price||2350)*USD_IDR/31.1035;}
+    else state.goldPrice=2350*USD_IDR/31.1035;
+    state.updated=new Date();
+  }catch{
+    state.prices={bitcoin:{usd:87500,usd_24h_change:1.2},ethereum:{usd:3400,usd_24h_change:-0.8},solana:{usd:185,usd_24h_change:2.1}};
+    state.goldPrice=2350*USD_IDR/31.1035;
+    state.updated=new Date();
+  }
+  state.loading=false; render();
+}
+
+function startAutoRefresh(){
+  if(fetchTimer)clearInterval(fetchTimer);
+  fetchTimer=setInterval(fetchPrices,5*60*1000);
+}
+
+// ── Compute values ────────────────────────────────────────────────────────────
+function compute(){
+  const p=state.portfolio;
+  const cryptoVals=p.crypto.map((c,i)=>{
+    const pr=state.prices[c.id];const usd=pr?.usd||0;const ch=pr?.usd_24h_change||0;
+    return{...c,priceUSD:usd,valueIDR:usd*USD_IDR*c.amount,change24h:ch,color:CRYPTO_COLORS[i%CRYPTO_COLORS.length]};
+  });
+  const sahamVals=p.saham.map((s,i)=>({...s,valueIDR:s.shares*s.priceIDR,color:SAHAM_COLORS[i%SAHAM_COLORS.length]}));
+  const emasVal=state.goldPrice*p.emas.grams;
+  const tabVal=compound(p.tabungan.principal,p.tabungan.monthlyRate,p.tabungan.months);
+  const cashVal=p.cash.amount;
+  const totCrypto=cryptoVals.reduce((a,c)=>a+c.valueIDR,0);
+  const totSaham=sahamVals.reduce((a,s)=>a+s.valueIDR,0);
+  const totAll=totCrypto+totSaham+emasVal+tabVal+cashVal||1;
+  const catPie=[
+    {name:'Kripto',  value:totCrypto,color:CAT.Kripto,  pct:(totCrypto/totAll)*100},
+    {name:'Saham',   value:totSaham, color:CAT.Saham,   pct:(totSaham/totAll)*100},
+    {name:'Emas',    value:emasVal,  color:CAT.Emas,    pct:(emasVal/totAll)*100},
+    {name:'Tabungan',value:tabVal,   color:CAT.Tabungan,pct:(tabVal/totAll)*100},
+    {name:'Cash',    value:cashVal,  color:CAT.Cash,    pct:(cashVal/totAll)*100},
+  ].filter(d=>d.value>0);
+  const detPie=[
+    ...cryptoVals.map(c=>({name:c.symbol,value:c.valueIDR,color:c.color,pct:(c.valueIDR/totAll)*100})),
+    ...sahamVals.map(s=>({name:s.ticker, value:s.valueIDR,color:s.color,pct:(s.valueIDR/totAll)*100})),
+    {name:'Emas',    value:emasVal, color:CAT.Emas,    pct:(emasVal/totAll)*100},
+    {name:'Tabungan',value:tabVal,  color:CAT.Tabungan,pct:(tabVal/totAll)*100},
+    {name:'Cash',    value:cashVal, color:CAT.Cash,    pct:(cashVal/totAll)*100},
+  ].filter(d=>d.value>0);
+  const wChange=totCrypto>0?cryptoVals.reduce((a,c)=>a+(c.change24h*c.valueIDR),0)/totAll:0;
+  return{cryptoVals,sahamVals,emasVal,tabVal,cashVal,totCrypto,totSaham,totAll,catPie,detPie,wChange};
+}
+
+// ── Canvas Donut Chart ────────────────────────────────────────────────────────
+function drawDonut(canvas, data, cx, cy, outerR, innerR){
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;
+  canvas.height=canvas.offsetHeight*dpr;
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,canvas.offsetWidth,canvas.offsetHeight);
+  
+  const total=data.reduce((a,d)=>a+d.value,0)||1;
+  let angle=-Math.PI/2;
+  const gap=0.03;
+  
+  data.forEach(d=>{
+    const sweep=(d.value/total)*Math.PI*2-gap;
+    ctx.beginPath();
+    ctx.arc(cx,cy,outerR,angle,angle+sweep);
+    ctx.arc(cx,cy,innerR,angle+sweep,angle,true);
+    ctx.closePath();
+    ctx.fillStyle=d.color;
+    ctx.fill();
+    angle+=sweep+gap;
+  });
+  
+  // Center text
+  ctx.fillStyle='#556070';
+  ctx.font=`500 11px 'DM Mono',monospace`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+}
+
+// ── HTML builder helpers ──────────────────────────────────────────────────────
+function h(tag,attrs,inner=''){
+  const a=Object.entries(attrs||{}).map(([k,v])=>{
+    if(k==='style'&&typeof v==='object')return`style="${Object.entries(v).map(([p,q])=>`${p.replace(/([A-Z])/g,'-$1').toLowerCase()}:${q}`).join(';')}"`;
+    if(k==='className')return`class="${v}"`;
+    return`${k}="${v}"`;
+  }).join(' ');
+  const voids=['input','br','hr','img','meta','link'];
+  if(voids.includes(tag))return`<${tag}${a?' '+a:''}>`;
+  return`<${tag}${a?' '+a:''}>${inner}</${tag}>`;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+let renderScheduled=false;
+function render(){
+  if(renderScheduled)return;
+  renderScheduled=true;
+  requestAnimationFrame(()=>{ renderScheduled=false; _render(); });
+}
+
+function _render(){
+  const {cryptoVals,sahamVals,emasVal,tabVal,cashVal,totCrypto,totSaham,totAll,catPie,detPie,wChange}=compute();
+  const p=state.portfolio;
+
+  // ── Header
+  const header=`
+  <div style="padding:14px 16px 12px;display:flex;justify-content:space-between;align-items:center;
+    position:sticky;top:0;z-index:100;background:#080C10EE;backdrop-filter:blur(16px);
+    border-bottom:1px solid #1E2530;">
+    <div>
+      <div style="font-size:18px;font-weight:800;letter-spacing:-0.5px">◈ PORTO<span style="color:#00E5FF">FOLIO</span></div>
+      <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;margin-top:2px">
+        ${state.updated?'Diperbarui '+state.updated.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}):'Memuat...'}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="fetchPrices()" style="background:${state.loading?'#1E2530':'#00E5FF11'};border:1px solid ${state.loading?'#1E2530':'#00E5FF44'};
+        color:${state.loading?'#556070':'#00E5FF'};border-radius:10px;padding:9px 13px;font-family:'DM Mono',monospace;font-size:16px;line-height:1">
+        ${state.loading?'⟳':'⟳'}
+      </button>
+      <button onclick="openEdit()" style="background:#F0F6FF11;border:1px solid #F0F6FF22;color:#F0F6FF;
+        border-radius:10px;padding:9px 14px;font-family:'Syne',sans-serif;font-size:13px;font-weight:600">
+        ✎ Edit
+      </button>
+    </div>
+  </div>`;
+
+  // ── Hero
+  const hero=`
+  <div style="margin:14px 14px 10px;background:linear-gradient(135deg,#0D1117,#0A1520);
+    border:1px solid #1E2530;border-radius:20px;padding:20px 18px;position:relative;overflow:hidden">
+    <div style="position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;
+      background:radial-gradient(circle,#00E5FF0A 0%,transparent 70%)"></div>
+    <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px;margin-bottom:8px">TOTAL PORTOFOLIO</div>
+    <div style="font-size:34px;font-weight:800;letter-spacing:-1.5px;line-height:1">${fmtC(totAll)}</div>
+    <div style="display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap">
+      <span style="font-family:'DM Mono',monospace;font-size:12px;color:${wChange>=0?'#B9FF66':'#FF6B6B'}">
+        ${wChange>=0?'▲':'▼'} ${Math.abs(wChange).toFixed(2)}% kripto 24j
+      </span>
+      <span style="background:#00E5FF22;color:#00E5FF;border:1px solid #00E5FF44;border-radius:999px;
+        padding:2px 9px;font-family:'DM Mono',monospace;font-size:10px">● LIVE</span>
+    </div>
+  </div>`;
+
+  // ── Chips
+  const chips=`
+  <div style="display:flex;gap:8px;padding:0 14px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch" class="chip-scroll">
+    ${catPie.map(c=>`
+    <div style="flex-shrink:0;background:#0D1117;border:1px solid ${c.color}33;border-radius:14px;padding:10px 14px;min-width:100px">
+      <div style="font-family:'DM Mono',monospace;color:${c.color};font-size:9px;letter-spacing:1px">${c.name.toUpperCase()}</div>
+      <div style="font-weight:700;font-size:14px;margin-top:3px">${fmtC(c.value)}</div>
+      <div style="font-family:'DM Mono',monospace;color:#556070;font-size:11px;margin-top:1px">${c.pct.toFixed(1)}%</div>
+    </div>`).join('')}
+  </div>`;
+
+  // ── Legend rows helper
+  const legendRows=(data)=>data.map(d=>`
+    <div style="display:flex;align-items:center;gap:6px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:#A0AFBF">${d.name}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:${d.color}">${d.pct.toFixed(1)}%</span>
+    </div>`).join('');
+
+  // ── Overview tab
+  let tabContent='';
+  if(state.tab==='overview'){
+    tabContent=`
+    <div style="background:#0D1117;border:1px solid #1E2530;border-radius:18px;padding:18px 16px;margin-bottom:12px">
+      <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px;margin-bottom:10px">DIVERSIFIKASI KATEGORI</div>
+      <div style="position:relative;height:210px">
+        <canvas id="donut1" style="width:100%;height:100%"></canvas>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:8px">${legendRows(catPie)}</div>
+    </div>
+    <div style="background:#0D1117;border:1px solid #1E2530;border-radius:18px;padding:18px 16px;margin-bottom:12px">
+      <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px;margin-bottom:10px">DIVERSIFIKASI PER ASET</div>
+      <div style="position:relative;height:210px">
+        <canvas id="donut2" style="width:100%;height:100%"></canvas>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:8px">${legendRows(detPie)}</div>
+    </div>
+    <div style="background:#0D1117;border:1px solid #1E2530;border-radius:18px;padding:18px 16px;margin-bottom:12px">
+      <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px;margin-bottom:12px">DISTRIBUSI NILAI</div>
+      ${catPie.map(c=>`
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="color:${c.color};font-size:13px;font-weight:600">${c.name}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:#A0AFBF">
+            ${fmtC(c.value)} <span style="color:#556070">(${c.pct.toFixed(1)}%)</span>
+          </span>
+        </div>
+        <div style="background:#1E2530;border-radius:999px;height:7px;overflow:hidden">
+          <div style="width:${c.pct}%;height:100%;border-radius:999px;background:linear-gradient(90deg,${c.color},${c.color+'66'});transition:width 1s ease"></div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // ── Kripto tab
+  if(state.tab==='kripto'){
+    tabContent=`
+    <div style="background:#0D1117;border:1px solid #1E2530;border-radius:18px;padding:18px 16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px">ASET KRIPTO</div>
+        <span style="font-family:'DM Mono',monospace;color:${CAT.Kripto};font-size:14px;font-weight:600">${fmtC(totCrypto)}</span>
+      </div>
+      ${cryptoVals.map((c,i)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;
+        ${i<cryptoVals.length-1?'border-bottom:1px solid #1E253044':''}">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+            background:${c.color+'22'};color:${c.color};font-family:'DM Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0">
+            ${c.symbol}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:16px">${c.name}</div>
+            <div style="font-family:'DM Mono',monospace;color:#556070;font-size:12px;margin-top:2px">${c.amount} ${c.symbol}</div>
+            <div style="font-family:'DM Mono',monospace;color:#556070;font-size:11px">$${c.priceUSD.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700;font-size:15px">${fmtC(c.valueIDR)}</div>
+          <div style="font-family:'DM Mono',monospace;color:${c.change24h>=0?'#B9FF66':'#FF6B6B'};font-size:13px;margin-top:3px">
+            ${c.change24h>=0?'▲':'▼'} ${Math.abs(c.change24h).toFixed(2)}%
+          </div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // ── Saham tab
+  if(state.tab==='saham'){
+    tabContent=`
+    <div style="background:#0D1117;border:1px solid #1E2530;border-radius:18px;padding:18px 16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px">PORTOFOLIO SAHAM</div>
+        <span style="font-family:'DM Mono',monospace;color:${CAT.Saham};font-size:14px;font-weight:600">${fmtC(totSaham)}</span>
+      </div>
+      ${sahamVals.map((s,i)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;
+        ${i<sahamVals.length-1?'border-bottom:1px solid #1E253044':''}">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:46px;height:46px;border-radius:13px;background:${s.color+'22'};color:${s.color};
+            display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;
+            font-size:9px;font-weight:700;flex-shrink:0;text-align:center;padding:0 2px">
+            ${s.ticker}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:16px;color:${s.color}">${s.ticker}</div>
+            <div style="color:#A0AFBF;font-size:13px">${s.name}</div>
+            <div style="font-family:'DM Mono',monospace;color:#556070;font-size:11px">${(s.shares/100).toFixed(0)} lot · ${fmtIDR(s.priceIDR)}/lbr</div>
+          </div>
+        </div>
+        <div style="font-weight:700;font-size:15px">${fmtC(s.valueIDR)}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // ── Lainnya tab
+  if(state.tab==='lainnya'){
+    tabContent=`
+    <div style="background:#0D1117;border:1px solid #1E2530;border-radius:18px;padding:18px 16px;margin-bottom:12px">
+      <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px;margin-bottom:10px">EMAS FISIK</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:26px;font-weight:800">${p.emas.grams}<span style="font-size:14px;color:#556070"> gram</span></div>
+          <div style="font-family:'DM Mono',monospace;color:#556070;font-size:12px;margin-top:4px">${fmtC(state.goldPrice)}/gram</div>
+        </div>
+        <div style="color:${CAT.Emas};font-size:22px;font-weight:700">${fmtC(emasVal)}</div>
+      </div>
+      <div style="background:#1E2530;border-radius:10px;padding:10px 14px;margin-top:14px;display:flex;justify-content:space-between">
+        <span style="font-family:'DM Mono',monospace;color:#556070;font-size:11px">Spot XAU/IDR per troy oz</span>
+        <span style="font-family:'DM Mono',monospace;color:${CAT.Emas};font-size:12px">${fmtC(state.goldPrice*31.1035)}</span>
+      </div>
+    </div>
+    <div style="background:#0D1117;border:1px solid #1E2530;border-radius:18px;padding:18px 16px;margin-bottom:12px">
+      <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px;margin-bottom:12px">TABUNGAN BERBUNGA</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:#1E2530;border-radius:12px;padding:12px">
+          <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;margin-bottom:4px">POKOK</div>
+          <div style="font-weight:700;font-size:14px">${fmtC(p.tabungan.principal)}</div>
+        </div>
+        <div style="background:#1E2530;border-radius:12px;padding:12px">
+          <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;margin-bottom:4px">BUNGA/BLN</div>
+          <div style="font-weight:700;font-size:14px;color:${CAT.Tabungan}">${(p.tabungan.monthlyRate*100).toFixed(1)}%</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:'DM Mono',monospace;color:#556070;font-size:11px">Nilai setelah ${p.tabungan.months} bulan</div>
+          <div style="font-size:20px;font-weight:700;margin-top:4px">${fmtC(tabVal)}</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;color:${CAT.Tabungan};font-size:14px;font-weight:600">
+          +${fmtC(tabVal-p.tabungan.principal)}
+        </div>
+      </div>
+    </div>
+    <div style="background:#0D1117;border:1px solid #1E2530;border-radius:18px;padding:18px 16px;margin-bottom:12px">
+      <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:2px;margin-bottom:10px">CASH / TUNAI</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:24px;font-weight:800;color:${CAT.Cash}">${fmtC(cashVal)}</div>
+        <div style="font-family:'DM Mono',monospace;color:#556070;font-size:14px">${((cashVal/totAll)*100).toFixed(1)}% porto</div>
+      </div>
+    </div>`;
+  }
+
+  // ── Bottom nav
+  const navItems=[
+    {id:'overview',icon:'⊞',label:'Porto'},
+    {id:'kripto',  icon:'◈',label:'Kripto'},
+    {id:'saham',   icon:'▲',label:'Saham'},
+    {id:'lainnya', icon:'◎',label:'Lainnya'},
+  ];
+  const nav=`
+  <nav style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+    background:#0D1117F4;border-top:1px solid #1E2530;backdrop-filter:blur(20px);display:flex;z-index:100">
+    ${navItems.map(n=>`
+    <button onclick="setTab('${n.id}')" style="flex:1;background:none;border:none;padding:10px 0 22px;
+      display:flex;flex-direction:column;align-items:center;gap:3px;
+      color:${state.tab===n.id?'#F0F6FF':'#556070'};
+      border-top:2px solid ${state.tab===n.id?'#00E5FF':'transparent'};
+      transition:all .15s">
+      <span style="font-size:18px">${n.icon}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.5px">${n.label}</span>
+    </button>`).join('')}
+  </nav>`;
+
+  // ── Edit modal
+  let editModal='';
+  if(state.editing&&state.editDraft){
+    const d=state.editDraft;
+    const sec=state.editSection;
+    const sections=['kripto','saham','emas','tabungan','cash'];
+    
+    const inp=(id,label,val,num=false)=>`
+      <div style="margin-bottom:12px">
+        <div style="font-family:'DM Mono',monospace;color:#556070;font-size:10px;letter-spacing:1px;margin-bottom:5px">${label.toUpperCase()}</div>
+        <input id="${id}" type="${num?'text':'text'}" inputmode="${num?'decimal':'text'}" value="${val}"
+          oninput="handleEditInput('${id}',this.value)"
+          style="width:100%;background:#080C10;border:1px solid #1E2530;border-radius:10px;color:#F0F6FF;
+            padding:13px 14px;font-family:'DM Mono',monospace;font-size:14px;outline:none"/>
+      </div>`;
+
+    let secContent='';
+    if(sec==='kripto'){
+      secContent=d.crypto.map((c,i)=>`
+        <div style="background:#0D1117;border:1px solid #1E2530;border-radius:14px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span style="font-family:'Syne',sans-serif;color:${CAT.Kripto};font-weight:700">${c.symbol||'Baru'}</span>
+            <button onclick="delCrypto(${i})" style="background:#FF6B6B22;border:none;color:#FF6B6B;border-radius:8px;padding:4px 12px;font-size:13px">Hapus</button>
+          </div>
+          ${inp(`ci${i}0`,'CoinGecko ID (cth: bitcoin)',c.id)}
+          ${inp(`ci${i}1`,'Symbol',c.symbol)}
+          ${inp(`ci${i}2`,'Nama',c.name)}
+          ${inp(`ci${i}3`,'Jumlah Koin',c.amount,true)}
+        </div>`).join('')+
+        `<button onclick="addCrypto()" style="width:100%;border:1px dashed ${CAT.Kripto+'55'};background:${CAT.Kripto+'11'};
+          color:${CAT.Kripto};border-radius:12px;padding:12px 0;font-family:'DM Mono',monospace;font-size:13px">
+          + Tambah Kripto
+        </button>`;
+    }
+    if(sec==='saham'){
+      secContent=d.saham.map((s,i)=>`
+        <div style="background:#0D1117;border:1px solid #1E2530;border-radius:14px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span style="font-family:'Syne',sans-serif;color:${CAT.Saham};font-weight:700">${s.ticker||'Baru'}</span>
+            <button onclick="delSaham(${i})" style="background:#FF6B6B22;border:none;color:#FF6B6B;border-radius:8px;padding:4px 12px;font-size:13px">Hapus</button>
+          </div>
+          ${inp(`si${i}0`,'Kode Saham',s.ticker)}
+          ${inp(`si${i}1`,'Nama Perusahaan',s.name)}
+          ${inp(`si${i}2`,'Jumlah Lembar',s.shares,true)}
+          ${inp(`si${i}3`,'Harga per Lembar (Rp)',s.priceIDR,true)}
+        </div>`).join('')+
+        `<button onclick="addSaham()" style="width:100%;border:1px dashed ${CAT.Saham+'55'};background:${CAT.Saham+'11'};
+          color:${CAT.Saham};border-radius:12px;padding:12px 0;font-family:'DM Mono',monospace;font-size:13px">
+          + Tambah Saham
+        </button>`;
+    }
+    if(sec==='emas') secContent=inp('emas_g','Jumlah Gram',d.emas.grams,true);
+    if(sec==='tabungan') secContent=
+      inp('tab_p','Pokok (Rp)',d.tabungan.principal,true)+
+      inp('tab_r','Bunga per Bulan (cth: 0.008 = 0.8%)',d.tabungan.monthlyRate,true)+
+      inp('tab_m','Sudah Berjalan (Bulan)',d.tabungan.months,true);
+    if(sec==='cash') secContent=inp('cash_a','Jumlah Cash (Rp)',d.cash.amount,true);
+
+    editModal=`
+    <div onclick="closeEdit()" style="position:fixed;inset:0;background:#000000CC;z-index:200;display:flex;flex-direction:column;justify-content:flex-end">
+      <div onclick="event.stopPropagation()" class="slide-up" style="background:#080C10;border-radius:22px 22px 0 0;
+        border:1px solid #1E2530;border-bottom:none;max-height:88vh;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:center;padding:12px 0 0">
+          <div style="width:36px;height:4px;border-radius:999px;background:#1E2530"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px 4px">
+          <span style="font-family:'Syne',sans-serif;color:#F0F6FF;font-size:18px;font-weight:700">Edit Portofolio</span>
+          <button onclick="closeEdit()" style="background:#1E2530;border:none;color:#A0AFBF;width:32px;height:32px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+        </div>
+        <div style="display:flex;gap:8px;padding:10px 20px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;scrollbar-width:none">
+          ${sections.map(s=>`
+          <button onclick="setEditSec('${s}')" style="background:${sec===s?'#F0F6FF':'#1E2530'};color:${sec===s?'#080C10':'#556070'};
+            border:none;border-radius:999px;padding:7px 16px;font-family:'Syne',sans-serif;
+            font-size:13px;font-weight:${sec===s?700:400};white-space:nowrap;flex-shrink:0">
+            ${s[0].toUpperCase()+s.slice(1)}
+          </button>`).join('')}
+        </div>
+        <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 20px 16px;flex:1">
+          ${secContent}
+        </div>
+        <div style="padding:0 20px 36px;flex-shrink:0">
+          <button onclick="saveEdit()" style="width:100%;background:#F0F6FF;border:none;border-radius:14px;
+            padding:16px 0;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#080C10">
+            Simpan Perubahan
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── Assemble
+  document.getElementById('app').innerHTML=`
+    <div style="background:#080C10;min-height:100vh;font-family:'Syne',sans-serif;color:#F0F6FF;max-width:480px;margin:0 auto;position:relative;overflow-x:hidden">
+      ${header}
+      ${hero}
+      ${chips}
+      <div style="padding:0 14px 90px" class="fade-in">
+        ${tabContent}
+      </div>
+      ${nav}
+      ${editModal}
+    </div>`;
+
+  // Draw donuts after DOM insert
+  if(state.tab==='overview'){
+    requestAnimationFrame(()=>{
+      const d1=document.getElementById('donut1');
+      const d2=document.getElementById('donut2');
+      if(d1){const w=d1.offsetWidth,h=d1.offsetHeight;drawDonut(d1,catPie,w/2,h/2,Math.min(w,h)*0.43,Math.min(w,h)*0.23);}
+      if(d2){const w=d2.offsetWidth,h=d2.offsetHeight;drawDonut(d2,detPie,w/2,h/2,Math.min(w,h)*0.43,Math.min(w,h)*0.20);}
+    });
+  }
+}
+
+// ── Global event handlers ─────────────────────────────────────────────────────
+function setTab(t){state.tab=t;render();}
+function openEdit(){state.editDraft=JSON.parse(JSON.stringify(state.portfolio));state.editing=true;render();}
+function closeEdit(){state.editing=false;state.editDraft=null;render();}
+function setEditSec(s){state.editSection=s;render();}
+
+function handleEditInput(id,val){
+  if(!state.editDraft)return;
+  const d=state.editDraft;
+  if(id.startsWith('ci')){
+    const i=parseInt(id[2]),f=parseInt(id[3]);
+    const fields=['id','symbol','name','amount'];
+    if(f===3)d.crypto[i].amount=parseFloat(val)||0;
+    else d.crypto[i][fields[f]]=val;
+  } else if(id.startsWith('si')){
+    const i=parseInt(id[2]),f=parseInt(id[3]);
+    const fields=['ticker','name','shares','priceIDR'];
+    if(f>=2)d.saham[i][fields[f]]=parseFloat(val)||0;
+    else d.saham[i][fields[f]]=val;
+  } else if(id==='emas_g') d.emas.grams=parseFloat(val)||0;
+  else if(id==='tab_p')  d.tabungan.principal=parseFloat(val)||0;
+  else if(id==='tab_r')  d.tabungan.monthlyRate=parseFloat(val)||0;
+  else if(id==='tab_m')  d.tabungan.months=parseInt(val)||0;
+  else if(id==='cash_a') d.cash.amount=parseFloat(val)||0;
+}
+
+function addCrypto(){state.editDraft.crypto.push({id:'',symbol:'',name:'',amount:0});render();}
+function delCrypto(i){state.editDraft.crypto.splice(i,1);render();}
+function addSaham(){state.editDraft.saham.push({ticker:'',name:'',shares:0,priceIDR:0});render();}
+function delSaham(i){state.editDraft.saham.splice(i,1);render();}
+
+function saveEdit(){
+  state.portfolio=JSON.parse(JSON.stringify(state.editDraft));
+  savePortfolio(state.portfolio);
+  state.editing=false;state.editDraft=null;
+  render();
+  setTimeout(fetchPrices,200);
+}
+
+// ── Service Worker registration ───────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').then(()=>{
+      console.log('SW registered');
+    }).catch(e=>console.log('SW failed:',e));
+  });
+}
+
+// ── Install prompt ────────────────────────────────────────────────────────────
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  showInstallBanner();
+});
+
+function showInstallBanner(){
+  if(document.getElementById('install-banner'))return;
+  const banner=document.createElement('div');
+  banner.id='install-banner';
+  banner.style.cssText='position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#00E5FF;color:#080C10;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:999;font-family:Syne,sans-serif;font-size:13px;font-weight:600';
+  banner.innerHTML=`
+    <span>📲 Install app ke homescreen</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="installApp()" style="background:#080C10;color:#00E5FF;border:none;border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;font-family:Syne,sans-serif">Install</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="background:transparent;border:none;color:#080C10;font-size:18px;line-height:1">✕</button>
+    </div>`;
+  document.body.prepend(banner);
+}
+
+function installApp(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('install-banner')?.remove();});}
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+render();
+fetchPrices();
+startAutoRefresh();
+</script>
+</body>
+</html>
